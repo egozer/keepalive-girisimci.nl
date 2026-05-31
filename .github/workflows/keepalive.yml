@@ -1,0 +1,37 @@
+name: Keep Site Warm
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm init -y
+      - run: npm i playwright
+      - run: npx playwright install chromium --with-deps
+
+      - run: |
+          node - <<'EOF'
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+
+            await page.goto('https://girisimci.nl', {
+              waitUntil: 'networkidle'
+            });
+
+            await page.waitForTimeout(120000);
+
+            await browser.close();
+          })();
+          EOF
