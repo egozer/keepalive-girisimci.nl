@@ -8,6 +8,7 @@ on:
 jobs:
   keepalive:
     runs-on: ubuntu-latest
+    timeout-minutes: 6
 
     steps:
       - uses: actions/setup-node@v4
@@ -18,20 +19,34 @@ jobs:
       - run: npm i playwright
       - run: npx playwright install chromium --with-deps
 
-      - run: |
+      - name: Keep site open repeatedly
+        run: |
           node - <<'EOF'
           const { chromium } = require('playwright');
 
           (async () => {
-            const browser = await chromium.launch();
-            const page = await browser.newPage();
+            const url = 'https://girisimci.nl';
 
-            await page.goto('https://girisimci.nl', {
-              waitUntil: 'networkidle'
-            });
+            const browser = await chromium.launch({ headless: true });
 
-            await page.waitForTimeout(120000);
+            for (let i = 1; i <= 3; i++) {
+              const page = await browser.newPage();
+
+              console.log(`Visit ${i}: opening ${url}`);
+
+              await page.goto(url, {
+                waitUntil: 'networkidle',
+                timeout: 60000
+              });
+
+              console.log(`Visit ${i}: waiting 90 seconds`);
+              await page.waitForTimeout(90000);
+
+              await page.close();
+              console.log(`Visit ${i}: closed`);
+            }
 
             await browser.close();
+            console.log('All visits completed.');
           })();
           EOF
